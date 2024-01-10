@@ -1,5 +1,6 @@
 import logging
 
+import google.auth.transport.requests
 from google.api_core import exceptions as google_exceptions
 from google.cloud import storage
 
@@ -24,6 +25,12 @@ class Client:
     def __init__(self, project_id=None, credentials=None):
         self._client = storage.Client(project=project_id, credentials=credentials)
 
+    def _ensure_valid_client(self):
+        if not self._client._transport._credentials.valid:
+            request = google.auth.transport.requests.Request()
+            self._client._transport._credentials.refresh(request=request)
+        return
+
     def create_bucket(self, bucket_name, project_id=None, location="US"):
         """Creates a bucket in GCS.
 
@@ -41,6 +48,7 @@ class Client:
         :raises e: If bucket creation fails for any reason.
         :return google.cloud.storage.bucket.Bucket: The newly created bucket.
         """
+        self._ensure_valid_client()
         if not project_id:
             project = self._client.project
         _LOGGER.info(
@@ -81,6 +89,7 @@ class Client:
             Defaults to ``True``.
         :return str or bytes: The data read from the blob.
         """
+        self._ensure_valid_client()
         _LOGGER.info(f"Getting gs://{bucket_name}/{blob_name}")
         blob = self._client.get_bucket(bucket_name).get_blob(blob_name)
         contents = blob.download_as_bytes()
@@ -137,6 +146,7 @@ class Client:
         :raises e: if the target bucket is not found and
             ``create_bucket_if_not_found!=True``.
         """
+        self._ensure_valid_client()
         try:
             bucket = self._client.get_bucket(bucket_name)
         except google_exceptions.NotFound as e:
