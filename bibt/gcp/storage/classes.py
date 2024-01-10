@@ -27,8 +27,15 @@ class Client:
 
     def _ensure_valid_client(self):
         if not self._client._transport._credentials.valid:
+            logging.info(
+                "Refreshing client credentials, token expired: "
+                f"[{self._client._transport._credentials.expiry}]"
+            )
             request = google.auth.transport.requests.Request()
             self._client._transport._credentials.refresh(request=request)
+            logging.info(
+                f"New expiration: [{self._client._transport._credentials.expiry}]"
+            )
         return
 
     def create_bucket(self, bucket_name, project_id=None, location="US"):
