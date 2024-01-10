@@ -26,7 +26,10 @@ class Client:
         self._client = storage.Client(project=project_id, credentials=credentials)
 
     def _ensure_valid_client(self):
-        if not self._client._transport._credentials.valid:
+        if (
+            not self._client._transport._credentials.valid
+            or not self._client._transport._credentials.expiry
+        ):
             logging.info(
                 "Refreshing client credentials, token expired: "
                 f"[{self._client._transport._credentials.expiry}]"
@@ -35,6 +38,11 @@ class Client:
             self._client._transport._credentials.refresh(request=request)
             logging.info(
                 f"New expiration: [{self._client._transport._credentials.expiry}]"
+            )
+        else:
+            logging.debug(
+                f"Token is valid: [{self._client._transport._credentials.valid}] "
+                f"expires: [{self._client._transport._credentials.expiry}]"
             )
         return
 
