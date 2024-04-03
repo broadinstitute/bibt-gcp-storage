@@ -171,7 +171,7 @@ class Client:
             if not create_bucket_if_not_found:
                 raise e
             _LOGGER.info(
-                "Creating not-found bucket as create_bucket_if_not_found==True"
+                f"Creating not-found bucket gs://{bucket_name} as create_bucket_if_not_found==True"
             )
             bucket = self.create_bucket(bucket_name)
         blob = bucket.blob(blob_name)
@@ -195,4 +195,43 @@ class Client:
         """
         nld_json = generate_json_nld(json_data, add_date)
         self.write_gcs(bucket_name, blob_name, nld_json)
+        return
+
+    def write_gcs_from_file(
+        self,
+        bucket_name,
+        blob_name,
+        file_path,
+        mime_type="text/plain",
+        create_bucket_if_not_found=False,
+        timeout=storage.constants._DEFAULT_TIMEOUT,
+    ):
+        """Write data from a local file to a blob in GCS.
+
+        :param str bucket_name: The name of the target bucket.
+        :param str blob_name: The name of the blob to contain the data.
+        :param str file_path: The path to the local file to upload.
+        :param str mime_type: The mime type of the data, (e.g. ``application/json``).
+            Defaults to ``text/plain``.
+        :param bool create_bucket_if_not_found: Whether to attempt to create the bucket
+            if it is not found, or raise an exception. Defaults to ``False``.
+        :param int timeout: The request timeout to use, defaults
+            to ``storage.constants._DEFAULT_TIMEOUT`` (which is ``60`` seconds).
+        :raises e: if the target bucket is not found and
+            ``create_bucket_if_not_found!=True``.
+        """
+        self._ensure_valid_client()
+        try:
+            bucket = self._client.get_bucket(bucket_name)
+        except google_exceptions.NotFound as e:
+            if not create_bucket_if_not_found:
+                raise e
+            _LOGGER.info(
+                f"Creating not-found bucket gs://{bucket_name} as create_bucket_if_not_found==True"
+            )
+            bucket = self.create_bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        _LOGGER.info(f"Writing {file_path} to GCS: gs://{bucket_name}/{blob_name}")
+        blob.upload_from_filename(file_path, content_type=mime_type, timeout=timeout)
+        _LOGGER.info("Upload complete.")
         return
